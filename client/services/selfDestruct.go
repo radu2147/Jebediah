@@ -1,6 +1,9 @@
 package services
 
-import "main/utils"
+import (
+	"fmt"
+	"main/utils"
+)
 
 type SelfDestruct struct {
 }
@@ -8,6 +11,7 @@ type SelfDestruct struct {
 func (s SelfDestruct) Start() {
 	err := utils.RemoveFromStartup()
 	if err != nil {
+		fmt.Println("Error self destructing")
 		return
 	}
 	panic("Goodbye")

@@ -159,10 +159,10 @@ func main() {
 	})
 
 	sv.POST("/owner", func(context *gin.Context) {
-		var text Log
+		var text TextLog
 		if err := context.ShouldBindJSON(&text); err == nil {
-			if _, err = os.Stat(fmt.Sprintf("./%s", text.Victim)); os.IsNotExist(err) {
-				err := os.Mkdir(text.Victim, 0755)
+			if _, err = os.Stat(fmt.Sprintf("./%s", text.Log.Victim)); os.IsNotExist(err) {
+				err := os.Mkdir(text.Log.Victim, 0755)
 				if err != nil {
 					context.JSON(http.StatusBadRequest, gin.H{
 						ActionKey: "Cannot create directory",
