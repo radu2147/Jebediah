@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const Url = "http://192.168.1.3:8080"
+const Url = "http://10.152.2.119:8080"
 
 type ErrorCode int
 
