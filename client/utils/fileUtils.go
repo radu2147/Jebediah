@@ -12,7 +12,7 @@ import (
 const FILENAME = "scanner.exe"
 
 func ParseStopCommand(val string) string {
-	return strings.Split(val, " ")[1]
+	return strings.Split(val, "-")[1]
 }
 
 func CopyFile(src, dst, filename string) (string, error) {

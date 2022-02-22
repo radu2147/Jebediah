@@ -26,7 +26,7 @@ const (
 	Error
 	NoActionMessage = "No action"
 	ActionKey       = "action"
-	StopAction      = "stop (keylog|lazyKeylog)"
+	StopAction      = "stop-(keylog|lazyKeylog)"
 )
 
 var (

