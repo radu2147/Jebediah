@@ -1,7 +1,7 @@
 package utils
 
 const (
-	BaseUrl = "http://10.152.2.119:8080"
+	BaseUrl = "http://192.168.1.6:8080"
 	Url     = BaseUrl + "/appendCommands"
 	GET     = iota
 	SET

