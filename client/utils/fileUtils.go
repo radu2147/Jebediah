@@ -15,6 +15,10 @@ func ParseStopCommand(val string) string {
 	return strings.Split(val, "-")[1]
 }
 
+func ParseShellCommand(body string) []string {
+	return strings.Split(body, " ")
+}
+
 func CopyFile(src, dst, filename string) (string, error) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {

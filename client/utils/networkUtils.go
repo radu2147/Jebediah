@@ -61,6 +61,10 @@ func HandleTextRequest(body, path, victim string) (map[string]string, error) {
 	return decoded, nil
 }
 
+func HandleShellRequest(body, victim string) (map[string]string, error) {
+	return HandleTextRequest(body, "shell", victim)
+}
+
 func HandleOwnerRequest(body, victim string) (map[string]string, error) {
 	return HandleTextRequest(body, "owner", victim)
 }

