@@ -32,14 +32,12 @@ func ExecuteShell(com *models.Command, aliasRepo *repo.AliasRepo) (string, error
 	if err != nil {
 		return "", err
 	}
-	for i := 0; i < 8; i++ {
-		time.Sleep(3000)
-		res, err := ExecuteShellGet(com, aliasRepo)
-		if res != "" || err != nil {
-			return res, err
-		}
+	time.Sleep(7 * time.Second)
+	res, err := ExecuteShellGet(com, aliasRepo)
+	if res != "" || err != nil {
+		return res, err
 	}
-	return "", errors.New("Timeout exception")
+	return "", err
 }
 
 func ExecuteShellGet(com *models.Command, aliasRepo *repo.AliasRepo) (string, error) {
